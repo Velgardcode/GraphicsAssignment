@@ -1,27 +1,92 @@
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>My Tinkercad Model</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
-    
+    <title>Bob in 3D</title>
     <style>
-        model-viewer {
+        body { margin: 0; background-color: #333; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
             width: 100%;
-            height: 500px;
-            background-color: #f0f0f0;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
         }
     </style>
 </head>
 <body>
+    <div id="info">Loading Bob...</div>
 
-    <h1>Meet Bob!</h1>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 
-    <model-viewer 
-        src="bob.gtl" 
-        alt="A 3D model of Bob made in Tinkercad" 
-        auto-rotate 
-        camera-controls>
-    </model-viewer>
+    <script type="module">
+        import * as THREE from 'three';
+        import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+        // 1. Setup Scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+
+        // 2. Setup Camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        // 3. Setup Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 4. Add Lights (Crucial for STL files)
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(1, 1, 1).normalize();
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        // 5. Add Controls (Allows you to drag and spin Bob)
+        const controls = new OrbitControls(camera, renderer.domElement);
+
+        // 6. Load the STL File
+        const loader = new STLLoader();
+        loader.load('./bob.stl', function (geometry) {
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, specular: 0x111111, shininess: 200 });
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // Center the model
+            geometry.computeBoundingBox();
+            const center = new THREE.Vector3();
+            geometry.boundingBox.getCenter(center);
+            mesh.position.sub(center);
+            
+            scene.add(mesh);
+            document.getElementById('info').innerHTML = "Meet Bob!";
+        }, 
+        (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); },
+        (error) => { console.error('An error happened', error); }
+        );
+
+        // 7. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
